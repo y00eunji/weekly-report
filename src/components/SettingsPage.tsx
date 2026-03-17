@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Eye, EyeOff, Save, CheckCircle, FolderOpen, GitBranch, X } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Save, CheckCircle, GitBranch, Plus, X } from 'lucide-react';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { ThemeToggle } from './ThemeToggle';
 import {
@@ -16,7 +16,8 @@ export default function SettingsPage() {
   const { dark, toggle } = useDarkMode();
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   const [showKey, setShowKey] = useState(false);
-  const [pickingFolder, setPickingFolder] = useState(false);
+  const [newRepoPath, setNewRepoPath] = useState('');
+  const [newRepoSlug, setNewRepoSlug] = useState('');
   const [saved, setSaved] = useState(false);
 
   const currentProvider = PROVIDERS.find((p) => p.id === settings.provider);
@@ -266,42 +267,48 @@ export default function SettingsPage() {
                         </div>
                       )}
 
-                      <button
-                        onClick={async () => {
-                          setPickingFolder(true);
-                          try {
-                            const res = await fetch('/api/pick-folder', { method: 'POST' });
-                            const data = await res.json();
-                            if (data.path && !data.cancelled) {
-                              if (!data.isGitRepo) {
-                                alert('선택한 폴더에 .git이 없습니다. Git 레포지토리 폴더를 선택해주세요.');
-                                return;
-                              }
-                              if (settings.git.repoPaths.includes(data.path)) {
-                                alert('이미 추가된 경로입니다.');
-                                return;
-                              }
+                      <div className="flex gap-2">
+                        <input
+                          value={newRepoPath}
+                          onChange={(e) => setNewRepoPath(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && newRepoPath.trim()) {
                               setSettings((prev) => ({
                                 ...prev,
                                 git: {
                                   ...prev.git,
-                                  repoPaths: [...prev.git.repoPaths, data.path],
+                                  repoPaths: [...prev.git.repoPaths, newRepoPath.trim()],
                                 },
                               }));
+                              setNewRepoPath('');
                               setSaved(false);
                             }
-                          } catch {
-                            alert('폴더 선택에 실패했습니다.');
-                          } finally {
-                            setPickingFolder(false);
-                          }
-                        }}
-                        disabled={pickingFolder}
-                        className="w-full py-2.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-[13px] font-medium cursor-pointer hover:border-blue-400 hover:text-blue-500 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-wait"
-                      >
-                        <FolderOpen size={16} />
-                        {pickingFolder ? '폴더 선택 중...' : '폴더 선택하여 추가'}
-                      </button>
+                          }}
+                          placeholder="~/Documents/my-project"
+                          className="flex-1 px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors font-mono"
+                        />
+                        <button
+                          onClick={() => {
+                            if (newRepoPath.trim()) {
+                              setSettings((prev) => ({
+                                ...prev,
+                                git: {
+                                  ...prev.git,
+                                  repoPaths: [...prev.git.repoPaths, newRepoPath.trim()],
+                                },
+                              }));
+                              setNewRepoPath('');
+                              setSaved(false);
+                            }
+                          }}
+                          className="px-3 py-2.5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors shrink-0"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">
+                        ~/로 시작하면 홈 디렉토리 기준으로 자동 변환됩니다
+                      </p>
                     </div>
                   </div>
                 )}
@@ -454,47 +461,49 @@ export default function SettingsPage() {
                         </div>
                       )}
 
-                      <button
-                        onClick={async () => {
-                          setPickingFolder(true);
-                          try {
-                            const res = await fetch('/api/pick-repo', { method: 'POST' });
-                            const data = await res.json();
-                            if (data.cancelled) return;
-                            if (data.error) {
-                              alert(data.error);
-                              return;
-                            }
-                            if (data.slug) {
-                              if (settings.bitbucket.repoSlugs.includes(data.slug)) {
-                                alert('이미 추가된 레포지토리입니다.');
-                                return;
-                              }
+                      <div className="flex gap-2">
+                        <input
+                          value={newRepoSlug}
+                          onChange={(e) => setNewRepoSlug(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && newRepoSlug.trim()) {
+                              const slug = newRepoSlug.trim().split('/').pop() || newRepoSlug.trim();
                               setSettings((prev) => ({
                                 ...prev,
                                 bitbucket: {
                                   ...prev.bitbucket,
-                                  repoSlugs: [...prev.bitbucket.repoSlugs, data.slug],
-                                  // workspace가 비어있으면 자동 채우기
-                                  ...(data.workspace && !prev.bitbucket.workspace ? { workspace: data.workspace } : {}),
+                                  repoSlugs: [...prev.bitbucket.repoSlugs, slug],
                                 },
                               }));
+                              setNewRepoSlug('');
                               setSaved(false);
                             }
-                          } catch {
-                            alert('폴더 선택에 실패했습니다.');
-                          } finally {
-                            setPickingFolder(false);
-                          }
-                        }}
-                        disabled={pickingFolder}
-                        className="w-full py-2.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-[13px] font-medium cursor-pointer hover:border-blue-400 hover:text-blue-500 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-wait"
-                      >
-                        <FolderOpen size={16} />
-                        {pickingFolder ? '폴더 선택 중...' : '로컬 폴더에서 레포 추가'}
-                      </button>
+                          }}
+                          placeholder="fms-front"
+                          className="flex-1 px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors font-mono"
+                        />
+                        <button
+                          onClick={() => {
+                            if (newRepoSlug.trim()) {
+                              const slug = newRepoSlug.trim().split('/').pop() || newRepoSlug.trim();
+                              setSettings((prev) => ({
+                                ...prev,
+                                bitbucket: {
+                                  ...prev.bitbucket,
+                                  repoSlugs: [...prev.bitbucket.repoSlugs, slug],
+                                },
+                              }));
+                              setNewRepoSlug('');
+                              setSaved(false);
+                            }
+                          }}
+                          className="px-3 py-2.5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors shrink-0"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
                       <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">
-                        Git 레포 폴더를 선택하면 remote URL에서 slug를 자동 추출합니다
+                        Bitbucket URL의 레포지토리 slug (예: bitbucket.org/workspace/<strong>my-repo</strong>)
                       </p>
                     </div>
                   </div>
