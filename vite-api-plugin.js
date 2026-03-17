@@ -33,6 +33,64 @@ export default function apiPlugin() {
         res.end(JSON.stringify(data));
       };
 
+      // ─── 폴더 선택 다이얼로그 (macOS) ───
+      server.middlewares.use('/api/pick-folder', async (req, res) => {
+        if (req.method !== 'POST') return sendJson(res, 405, { error: 'Method not allowed' });
+
+        try {
+          const selected = execFileSync('osascript', [
+            '-e', 'POSIX path of (choose folder with prompt "Git 레포지토리 폴더를 선택하세요")',
+          ], { encoding: 'utf-8', timeout: 60000 }).trim();
+
+          // 끝에 / 제거
+          const folderPath = selected.replace(/\/+$/, '');
+
+          // .git 폴더가 있는지 확인
+          const isGitRepo = fs.existsSync(path.join(folderPath, '.git'));
+
+          sendJson(res, 200, { path: folderPath, isGitRepo });
+        } catch (err) {
+          // 사용자가 취소한 경우
+          if (err.status === 1) {
+            return sendJson(res, 200, { path: null, cancelled: true });
+          }
+          sendJson(res, 500, { error: err.message });
+        }
+      });
+
+      // ─── 폴더에서 Git remote slug 추출 ───
+      server.middlewares.use('/api/pick-repo', async (req, res) => {
+        if (req.method !== 'POST') return sendJson(res, 405, { error: 'Method not allowed' });
+
+        try {
+          const selected = execFileSync('osascript', [
+            '-e', 'POSIX path of (choose folder with prompt "Git 레포지토리 폴더를 선택하세요")',
+          ], { encoding: 'utf-8', timeout: 60000 }).trim().replace(/\/+$/, '');
+
+          // git remote URL 가져오기
+          let remoteUrl = '';
+          try {
+            remoteUrl = execFileSync('git', ['remote', 'get-url', 'origin'], {
+              cwd: selected, encoding: 'utf-8', timeout: 5000,
+            }).trim();
+          } catch {
+            return sendJson(res, 200, { error: '선택한 폴더에 git remote(origin)가 없습니다.' });
+          }
+
+          // slug 추출: git@bitbucket.org:workspace/slug.git 또는 https://.../.../slug.git
+          const sshMatch = remoteUrl.match(/bitbucket\.org[:/]([^/]+)\/([^/.]+)/);
+          const slug = sshMatch ? sshMatch[2] : path.basename(selected);
+          const workspace = sshMatch ? sshMatch[1] : '';
+
+          sendJson(res, 200, { slug, workspace, remoteUrl, path: selected });
+        } catch (err) {
+          if (err.status === 1) {
+            return sendJson(res, 200, { cancelled: true });
+          }
+          sendJson(res, 500, { error: err.message });
+        }
+      });
+
       // ─── 로컬 Git 커밋 수집 ───
       server.middlewares.use('/api/git/commits', async (req, res) => {
         if (req.method !== 'POST') return sendJson(res, 405, { error: 'Method not allowed' });
