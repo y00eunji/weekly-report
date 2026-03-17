@@ -17,15 +17,21 @@ import type { SavedReport } from './types/report';
 // ISO 형식 (YYYY-MM-DD) - input[type=date]용
 const toISO = (d: Date) => d.toISOString().substring(0, 10);
 
-// 이번 주 월요일~금요일 계산
-const getThisWeekRange = () => {
+// 스프린트 기간: 저번 주 수요일 ~ 이번 주 화요일
+const getSprintRange = () => {
   const now = new Date();
-  const day = now.getDay();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
-  const friday = new Date(monday);
-  friday.setDate(monday.getDate() + 4);
-  return { from: toISO(monday), to: toISO(friday) };
+  const day = now.getDay(); // 0=일, 1=월, ..., 6=토
+
+  // 이번 주 화요일 구하기 (day=0이면 -5, day=1이면 +1, day=2이면 0, day=3이면 -1, ...)
+  const tuesday = new Date(now);
+  const diffToTuesday = day === 0 ? -5 : 2 - day;
+  tuesday.setDate(now.getDate() + diffToTuesday);
+
+  // 저번 주 수요일 = 이번 주 화요일 - 6일
+  const wednesday = new Date(tuesday);
+  wednesday.setDate(tuesday.getDate() - 6);
+
+  return { from: toISO(wednesday), to: toISO(tuesday) };
 };
 
 // 보고서 표시용 날짜 (YYYY/M/D)
@@ -53,7 +59,7 @@ export default function App() {
 
   type InputMode = 'manual' | 'git';
   const [mode, setMode] = useState<InputMode>(hasGit ? 'git' : 'manual');
-  const weekRange = getThisWeekRange();
+  const weekRange = getSprintRange();
   const [name, setName] = useState(settings.userName || '');
   const [dateFrom, setDateFrom] = useState(weekRange.from);
   const [dateTo, setDateTo] = useState(weekRange.to);
