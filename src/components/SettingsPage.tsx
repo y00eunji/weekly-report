@@ -1,12 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Eye, EyeOff, Save, CheckCircle, FolderOpen, GitBranch, Plus, X } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Save, CheckCircle, FolderOpen, GitBranch, X } from 'lucide-react';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { ThemeToggle } from './ThemeToggle';
 import {
   type AppSettings,
   type Provider,
-  type GitSource,
   PROVIDERS,
   loadSettings,
   saveSettings,
