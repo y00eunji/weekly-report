@@ -55,6 +55,7 @@ const buildContentRows = (groups: ReportGroup[]): PptxTextRow[] =>
         paraSpaceBefore: 1,
         paraSpaceAfter: 1,
         bullet: { code: "2022" },
+        indentLevel: 1,
         indent: 0.35,
         breakLine: true,
       },
