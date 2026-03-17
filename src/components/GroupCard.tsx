@@ -1,4 +1,4 @@
-import { Plus, GripVertical } from 'lucide-react';
+import { Plus, GripVertical, X } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -37,11 +37,13 @@ const SortableItem = ({
   item,
   itemIdx,
   onItemChange,
+  onDeleteItem,
 }: {
   id: string;
   item: ReportItem;
   itemIdx: number;
   onItemChange: (itemIdx: number, field: string, value: string) => void;
+  onDeleteItem: (itemIdx: number) => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = {
@@ -51,11 +53,11 @@ const SortableItem = ({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="flex items-start gap-1 mb-1 pl-1">
+    <div ref={setNodeRef} style={style} className="group/item flex items-center gap-1 mb-1 pl-1">
       <button
         {...attributes}
         {...listeners}
-        className="border-none bg-transparent text-gray-300 dark:text-gray-600 cursor-grab active:cursor-grabbing p-0 mt-0.5 shrink-0 hover:text-gray-500 dark:hover:text-gray-400 transition-colors"
+        className="border-none bg-transparent text-gray-300 dark:text-gray-600 cursor-grab active:cursor-grabbing p-0 shrink-0 hover:text-gray-500 dark:hover:text-gray-400 transition-colors"
       >
         <GripVertical size={12} />
       </button>
@@ -71,6 +73,12 @@ const SortableItem = ({
         className="border-none bg-none cursor-pointer p-0 shrink-0"
       >
         <StatusBadge status={item.status} />
+      </button>
+      <button
+        onClick={() => onDeleteItem(itemIdx)}
+        className="border-none bg-transparent text-gray-300 dark:text-gray-600 cursor-pointer p-0 shrink-0 hover:text-red-500 dark:hover:text-red-400 transition-colors opacity-0 group-hover/item:opacity-100"
+      >
+        <X size={12} />
       </button>
     </div>
   );
@@ -124,6 +132,10 @@ const GroupCard = ({
     onUpdate(sectionKey, groupIdx, 'item', { itemIdx, field, value });
   };
 
+  const handleDeleteItem = (itemIdx: number) => {
+    onUpdate(sectionKey, groupIdx, 'delete_item', { itemIdx, field: '', value: '' });
+  };
+
   const handleItemDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -133,7 +145,7 @@ const GroupCard = ({
   };
 
   return (
-    <div className="mb-3 p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10">
+    <div className="group/card mb-3 p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10">
       <div className="flex items-center gap-1 mb-2">
         {dragHandleProps && (
           <button
@@ -149,6 +161,12 @@ const GroupCard = ({
           onChange={handleTitleChange}
           className="w-full border-none bg-transparent text-[13px] font-bold text-gray-900 dark:text-gray-100 outline-none"
         />
+        <button
+          onClick={() => onUpdate(sectionKey, groupIdx, 'delete_group', '')}
+          className="border-none bg-transparent text-gray-300 dark:text-gray-600 cursor-pointer p-0 shrink-0 hover:text-red-500 dark:hover:text-red-400 transition-colors opacity-0 group-hover/card:opacity-100"
+        >
+          <X size={14} />
+        </button>
       </div>
       <DndContext
         sensors={sensors}
@@ -166,6 +184,7 @@ const GroupCard = ({
               item={item}
               itemIdx={iIdx}
               onItemChange={handleItemChange}
+              onDeleteItem={handleDeleteItem}
             />
           ))}
         </SortableContext>

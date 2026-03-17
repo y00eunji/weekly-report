@@ -111,6 +111,10 @@ export default function App() {
           next[sectionKey].push({ group_title: '새 그룹', items: [{ text: '내용을 입력하세요', status: '진행중' }] });
         } else if (field === 'add_item') {
           next[sectionKey][groupIdx].items.push({ text: '내용을 입력하세요', status: '진행중' });
+        } else if (field === 'delete_group') {
+          next[sectionKey].splice(groupIdx, 1);
+        } else if (field === 'delete_item' && typeof value === 'object') {
+          next[sectionKey][groupIdx].items.splice(value.itemIdx, 1);
         }
         return next;
       });
