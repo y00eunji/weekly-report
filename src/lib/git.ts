@@ -1,6 +1,6 @@
 import { loadSettings } from './settings';
 
-const GIT_PROXY_BASE = 'http://localhost:3001/api';
+const GIT_PROXY_BASE = '/api';
 
 export interface GitCommit {
   hash: string;

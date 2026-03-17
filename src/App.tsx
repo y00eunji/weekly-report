@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronDown, ChevronUp, Download, FileText, GitBranch, Keyboard, RotateCcw, Save, Settings, Sparkles } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Cloud, Download, FileText, GitBranch, Keyboard, RotateCcw, Save, Settings, Sparkles } from 'lucide-react';
 import { usePptxGenLoader } from './hooks/usePptxGenLoader';
 import { useReportGenerator } from './hooks/useReportGenerator';
 import { useReportHistory } from './hooks/useReportHistory';
@@ -13,6 +13,7 @@ import { SAMPLE_INPUT } from './lib/constants';
 import { DateRangePicker } from './components/DateRangePicker';
 import { loadSettings } from './lib/settings';
 import { fetchLocalGitData, formatGitDataForAI } from './lib/git';
+import { fetchBitbucketCommits } from './lib/bitbucket';
 import type { SavedReport } from './types/report';
 
 // ISO 형식 (YYYY-MM-DD) - input[type=date]용
@@ -57,9 +58,11 @@ export default function App() {
   const settings = loadSettings();
   const hasApiKey = !!settings.apiKey;
   const hasGit = !!(settings.git.repoPaths.length && settings.git.authorName);
+  const hasBitbucket = !!(settings.bitbucket?.workspace && settings.bitbucket?.repoSlugs?.length && settings.bitbucket?.username && settings.bitbucket?.apiToken);
 
-  type InputMode = 'manual' | 'git';
-  const [mode, setMode] = useState<InputMode>(hasGit ? 'git' : 'manual');
+  type InputMode = 'manual' | 'git' | 'bitbucket';
+  const defaultMode = settings.gitSource === 'bitbucket' && hasBitbucket ? 'bitbucket' : hasGit ? 'git' : 'manual';
+  const [mode, setMode] = useState<InputMode>(defaultMode);
   const weekRange = getSprintRange();
   const [name, setName] = useState(settings.userName || '');
   const [dateFrom, setDateFrom] = useState(weekRange.from);
@@ -72,7 +75,9 @@ export default function App() {
     setFetching(true);
     setError(null);
     try {
-      const data = await fetchLocalGitData(dateFrom, dateTo);
+      const data = mode === 'bitbucket'
+        ? await fetchBitbucketCommits(dateFrom, dateTo)
+        : await fetchLocalGitData(dateFrom, dateTo);
       const text = formatGitDataForAI(data);
       setInput(text);
     } catch (e) {
@@ -94,7 +99,7 @@ export default function App() {
       navigate('/settings');
       return;
     }
-    parse(input, name, toDisplayDate(dateTo), mode === 'git');
+    parse(input, name, toDisplayDate(dateTo), mode === 'git' || mode === 'bitbucket');
   };
 
   const handleUpdate = useCallback(
@@ -262,11 +267,22 @@ export default function App() {
                     }`}
                   >
                     <GitBranch size={14} />
-                    Git 자동 수집
+                    로컬 Git
+                  </button>
+                  <button
+                    onClick={() => setMode('bitbucket')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-semibold cursor-pointer border-none transition-all ${
+                      mode === 'bitbucket'
+                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                        : 'bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    <Cloud size={14} />
+                    Bitbucket
                   </button>
                 </div>
 
-                {/* Git Mode */}
+                {/* Git Mode (Local) */}
                 {mode === 'git' && (
                   <div className="mb-3">
                     {!hasGit ? (
@@ -278,7 +294,6 @@ export default function App() {
                       </button>
                     ) : (
                       <div className="space-y-3">
-                        {/* 기간 선택 */}
                         <div>
                           <label className="block text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1 tracking-wider uppercase">
                             기간
@@ -303,10 +318,46 @@ export default function App() {
                   </div>
                 )}
 
+                {/* Bitbucket Mode */}
+                {mode === 'bitbucket' && (
+                  <div className="mb-3">
+                    {!hasBitbucket ? (
+                      <button
+                        onClick={() => navigate('/settings')}
+                        className="w-full px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 text-blue-700 dark:text-blue-400 text-xs font-medium cursor-pointer text-left hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors"
+                      >
+                        Bitbucket 설정이 필요합니다. 여기를 클릭하여 설정해주세요.
+                      </button>
+                    ) : (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1 tracking-wider uppercase">
+                            기간
+                          </label>
+                          <DateRangePicker
+                            dateFrom={dateFrom}
+                            dateTo={dateTo}
+                            onChangeFrom={setDateFrom}
+                            onChangeTo={setDateTo}
+                          />
+                        </div>
+                        <button
+                          onClick={handleFetchGit}
+                          disabled={fetching}
+                          className="w-full py-2.5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs font-semibold cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          <Cloud size={14} />
+                          {fetching ? '수집 중...' : 'Bitbucket 커밋 수집하기'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Text Area (both modes) */}
                 <div className="flex justify-between items-center mb-2">
                   <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 tracking-wider uppercase">
-                    {mode === 'git' ? '수집된 내용 (편집 가능)' : '작업 내용'}
+                    {mode !== 'manual' ? '수집된 내용 (편집 가능)' : '작업 내용'}
                   </label>
                   {mode === 'manual' && (
                     <button
@@ -321,7 +372,7 @@ export default function App() {
                   ref={textareaRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder={mode === 'git'
+                  placeholder={mode !== 'manual'
                     ? '위 버튼을 눌러 커밋을 수집하거나, 직접 추가 내용을 입력할 수 있습니다'
                     : `이번 주 작업 내용을 자유롭게 입력하세요...\n\n예) 수입금 관리 페이지 버그 수정\n     기사 목록 검색 기능 개선 완료\n     차주: QA 대응 진행중`}
                   rows={10}

@@ -33,9 +33,20 @@ export const PROVIDERS: ProviderConfig[] = [
   },
 ];
 
+export type GitSource = 'local' | 'bitbucket';
+
 export interface GitSettings {
   repoPaths: string[];   // 로컬 레포 절대 경로들
   authorName: string;    // git log --author 필터용
+}
+
+export interface BitbucketSettings {
+  username: string;      // Bitbucket 이메일 또는 사용자명
+  apiToken: string;      // Bitbucket API Token
+  workspace: string;     // Bitbucket 워크스페이스
+  repoSlugs: string[];   // 레포지토리 slug 목록
+  authorName: string;    // 커밋 작성자 필터용
+  branch: string;        // 대상 브랜치 (예: develop)
 }
 
 export interface AppSettings {
@@ -43,7 +54,9 @@ export interface AppSettings {
   model: string;
   apiKey: string;
   userName: string;
+  gitSource: GitSource;
   git: GitSettings;
+  bitbucket: BitbucketSettings;
 }
 
 const STORAGE_KEY = 'weekly-report-settings';
@@ -53,9 +66,18 @@ const DEFAULTS: AppSettings = {
   model: 'claude-sonnet-4-20250514',
   apiKey: '',
   userName: '',
+  gitSource: 'local',
   git: {
     repoPaths: [],
     authorName: '',
+  },
+  bitbucket: {
+    username: '',
+    apiToken: '',
+    workspace: '',
+    repoSlugs: [],
+    authorName: '',
+    branch: 'develop',
   },
 };
 

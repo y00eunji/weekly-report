@@ -6,6 +6,7 @@ import { ThemeToggle } from './ThemeToggle';
 import {
   type AppSettings,
   type Provider,
+  type GitSource,
   PROVIDERS,
   loadSettings,
   saveSettings,
@@ -17,6 +18,7 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   const [showKey, setShowKey] = useState(false);
   const [newRepoPath, setNewRepoPath] = useState('');
+  const [newRepoSlug, setNewRepoSlug] = useState('');
   const [saved, setSaved] = useState(false);
 
   const currentProvider = PROVIDERS.find((p) => p.id === settings.provider);
@@ -173,113 +175,340 @@ export default function SettingsPage() {
                     Git 커밋 자동 수집
                   </span>
                 </div>
-                <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-3 leading-relaxed">
-                  로컬 Git 레포 경로를 등록하면 커밋 내역을 자동으로 수집합니다
-                </p>
 
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      Git Author (커밋 작성자 이름 또는 이메일)
-                    </label>
-                    <input
-                      value={settings.git.authorName}
-                      onChange={(e) => {
-                        setSettings((prev) => ({
-                          ...prev,
-                          git: { ...prev.git, authorName: e.target.value },
-                        }));
-                        setSaved(false);
-                      }}
-                      placeholder="홍길동 또는 gildong@company.com"
-                      className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors"
-                    />
-                    <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
-                      git config user.name 또는 user.email 값과 일치해야 합니다
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-                      레포 경로
-                    </label>
-
-                    {/* 등록된 레포 목록 */}
-                    {settings.git.repoPaths.length > 0 && (
-                      <div className="space-y-1.5 mb-2">
-                        {settings.git.repoPaths.map((p, i) => (
-                          <div
-                            key={i}
-                            className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
-                          >
-                            <span className="flex-1 text-[12px] text-gray-700 dark:text-gray-300 font-mono truncate">
-                              {p}
-                            </span>
-                            <button
-                              onClick={() => {
-                                setSettings((prev) => ({
-                                  ...prev,
-                                  git: {
-                                    ...prev.git,
-                                    repoPaths: prev.git.repoPaths.filter((_, idx) => idx !== i),
-                                  },
-                                }));
-                                setSaved(false);
-                              }}
-                              className="text-gray-400 hover:text-red-500 bg-transparent border-none cursor-pointer p-0.5 shrink-0"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* 새 경로 추가 */}
-                    <div className="flex gap-2">
-                      <input
-                        value={newRepoPath}
-                        onChange={(e) => setNewRepoPath(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && newRepoPath.trim()) {
-                            setSettings((prev) => ({
-                              ...prev,
-                              git: {
-                                ...prev.git,
-                                repoPaths: [...prev.git.repoPaths, newRepoPath.trim()],
-                              },
-                            }));
-                            setNewRepoPath('');
-                            setSaved(false);
-                          }
-                        }}
-                        placeholder="~/projects/my-repo"
-                        className="flex-1 px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors font-mono"
-                      />
-                      <button
-                        onClick={() => {
-                          if (newRepoPath.trim()) {
-                            setSettings((prev) => ({
-                              ...prev,
-                              git: {
-                                ...prev.git,
-                                repoPaths: [...prev.git.repoPaths, newRepoPath.trim()],
-                              },
-                            }));
-                            setNewRepoPath('');
-                            setSaved(false);
-                          }
-                        }}
-                        className="px-3 py-2.5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors shrink-0"
-                      >
-                        <Plus size={16} />
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">
-                      ~/로 시작하면 홈 디렉토리 기준으로 자동 변환됩니다
-                    </p>
-                  </div>
+                {/* Source Toggle */}
+                <div className="flex gap-1 mb-4 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                  <button
+                    onClick={() => {
+                      setSettings((prev) => ({ ...prev, gitSource: 'local' }));
+                      setSaved(false);
+                    }}
+                    className={`flex-1 py-2 rounded-md text-xs font-semibold cursor-pointer border-none transition-all ${
+                      settings.gitSource === 'local'
+                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                        : 'bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    로컬 Git
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSettings((prev) => ({ ...prev, gitSource: 'bitbucket' }));
+                      setSaved(false);
+                    }}
+                    className={`flex-1 py-2 rounded-md text-xs font-semibold cursor-pointer border-none transition-all ${
+                      settings.gitSource === 'bitbucket'
+                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                        : 'bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    Bitbucket
+                  </button>
                 </div>
+
+                {/* Local Git Settings */}
+                {settings.gitSource === 'local' && (
+                  <div className="space-y-3">
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed">
+                      로컬 Git 레포 경로를 등록하면 커밋 내역을 자동으로 수집합니다
+                    </p>
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        Git Author (커밋 작성자 이름 또는 이메일)
+                      </label>
+                      <input
+                        value={settings.git.authorName}
+                        onChange={(e) => {
+                          setSettings((prev) => ({
+                            ...prev,
+                            git: { ...prev.git, authorName: e.target.value },
+                          }));
+                          setSaved(false);
+                        }}
+                        placeholder="홍길동 또는 gildong@company.com"
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors"
+                      />
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                        git config user.name 또는 user.email 값과 일치해야 합니다
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                        레포 경로
+                      </label>
+
+                      {settings.git.repoPaths.length > 0 && (
+                        <div className="space-y-1.5 mb-2">
+                          {settings.git.repoPaths.map((p, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+                            >
+                              <span className="flex-1 text-[12px] text-gray-700 dark:text-gray-300 font-mono truncate">
+                                {p}
+                              </span>
+                              <button
+                                onClick={() => {
+                                  setSettings((prev) => ({
+                                    ...prev,
+                                    git: {
+                                      ...prev.git,
+                                      repoPaths: prev.git.repoPaths.filter((_, idx) => idx !== i),
+                                    },
+                                  }));
+                                  setSaved(false);
+                                }}
+                                className="text-gray-400 hover:text-red-500 bg-transparent border-none cursor-pointer p-0.5 shrink-0"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <input
+                          value={newRepoPath}
+                          onChange={(e) => setNewRepoPath(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && newRepoPath.trim()) {
+                              setSettings((prev) => ({
+                                ...prev,
+                                git: {
+                                  ...prev.git,
+                                  repoPaths: [...prev.git.repoPaths, newRepoPath.trim()],
+                                },
+                              }));
+                              setNewRepoPath('');
+                              setSaved(false);
+                            }
+                          }}
+                          placeholder="~/projects/my-repo"
+                          className="flex-1 px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors font-mono"
+                        />
+                        <button
+                          onClick={() => {
+                            if (newRepoPath.trim()) {
+                              setSettings((prev) => ({
+                                ...prev,
+                                git: {
+                                  ...prev.git,
+                                  repoPaths: [...prev.git.repoPaths, newRepoPath.trim()],
+                                },
+                              }));
+                              setNewRepoPath('');
+                              setSaved(false);
+                            }
+                          }}
+                          className="px-3 py-2.5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors shrink-0"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">
+                        ~/로 시작하면 홈 디렉토리 기준으로 자동 변환됩니다
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Bitbucket Settings */}
+                {settings.gitSource === 'bitbucket' && (
+                  <div className="space-y-3">
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed">
+                      Bitbucket App Password로 원격 레포의 커밋을 수집합니다.
+                      로컬 서버 없이 배포 환경에서도 동작합니다.
+                    </p>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        이메일 (Atlassian 계정)
+                      </label>
+                      <input
+                        value={settings.bitbucket.username}
+                        onChange={(e) => {
+                          setSettings((prev) => ({
+                            ...prev,
+                            bitbucket: { ...prev.bitbucket, username: e.target.value },
+                          }));
+                          setSaved(false);
+                        }}
+                        placeholder="ejyoo@autocrypt.io"
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        워크스페이스
+                      </label>
+                      <input
+                        value={settings.bitbucket.workspace}
+                        onChange={(e) => {
+                          setSettings((prev) => ({
+                            ...prev,
+                            bitbucket: { ...prev.bitbucket, workspace: e.target.value },
+                          }));
+                          setSaved(false);
+                        }}
+                        placeholder="my-workspace"
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        API Token
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showKey ? 'text' : 'password'}
+                          value={settings.bitbucket.apiToken}
+                          onChange={(e) => {
+                            setSettings((prev) => ({
+                              ...prev,
+                              bitbucket: { ...prev.bitbucket, apiToken: e.target.value },
+                            }));
+                            setSaved(false);
+                          }}
+                          placeholder="ATCTT3xFfGN0..."
+                          className="w-full px-3 py-2.5 pr-10 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors font-mono"
+                        />
+                        <button
+                          onClick={() => setShowKey((prev) => !prev)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-transparent border-none cursor-pointer p-0.5"
+                        >
+                          {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                        id.atlassian.com → 보안 → API 토큰에서 생성
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        커밋 작성자 필터 (선택)
+                      </label>
+                      <input
+                        value={settings.bitbucket.authorName}
+                        onChange={(e) => {
+                          setSettings((prev) => ({
+                            ...prev,
+                            bitbucket: { ...prev.bitbucket, authorName: e.target.value },
+                          }));
+                          setSaved(false);
+                        }}
+                        placeholder="홍길동 또는 gildong@company.com"
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        브랜치
+                      </label>
+                      <input
+                        value={settings.bitbucket.branch}
+                        onChange={(e) => {
+                          setSettings((prev) => ({
+                            ...prev,
+                            bitbucket: { ...prev.bitbucket, branch: e.target.value },
+                          }));
+                          setSaved(false);
+                        }}
+                        placeholder="develop"
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors"
+                      />
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                        비워두면 전체 브랜치의 커밋을 수집합니다
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                        레포지토리 (slug)
+                      </label>
+
+                      {settings.bitbucket.repoSlugs.length > 0 && (
+                        <div className="space-y-1.5 mb-2">
+                          {settings.bitbucket.repoSlugs.map((slug, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+                            >
+                              <span className="flex-1 text-[12px] text-gray-700 dark:text-gray-300 font-mono truncate">
+                                <span className="text-gray-400 dark:text-gray-500">{settings.bitbucket.workspace}/</span>{slug}
+                              </span>
+                              <button
+                                onClick={() => {
+                                  setSettings((prev) => ({
+                                    ...prev,
+                                    bitbucket: {
+                                      ...prev.bitbucket,
+                                      repoSlugs: prev.bitbucket.repoSlugs.filter((_, idx) => idx !== i),
+                                    },
+                                  }));
+                                  setSaved(false);
+                                }}
+                                className="text-gray-400 hover:text-red-500 bg-transparent border-none cursor-pointer p-0.5 shrink-0"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <input
+                          value={newRepoSlug}
+                          onChange={(e) => setNewRepoSlug(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && newRepoSlug.trim()) {
+                              const slug = newRepoSlug.trim().split('/').pop() || newRepoSlug.trim();
+                              setSettings((prev) => ({
+                                ...prev,
+                                bitbucket: {
+                                  ...prev.bitbucket,
+                                  repoSlugs: [...prev.bitbucket.repoSlugs, slug],
+                                },
+                              }));
+                              setNewRepoSlug('');
+                              setSaved(false);
+                            }
+                          }}
+                          placeholder="fms-front"
+                          className="flex-1 px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors font-mono"
+                        />
+                        <button
+                          onClick={() => {
+                            if (newRepoSlug.trim()) {
+                              const slug = newRepoSlug.trim().split('/').pop() || newRepoSlug.trim();
+                              setSettings((prev) => ({
+                                ...prev,
+                                bitbucket: {
+                                  ...prev.bitbucket,
+                                  repoSlugs: [...prev.bitbucket.repoSlugs, slug],
+                                },
+                              }));
+                              setNewRepoSlug('');
+                              setSaved(false);
+                            }
+                          }}
+                          className="px-3 py-2.5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors shrink-0"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">
+                        Bitbucket URL의 레포지토리 slug (예: bitbucket.org/workspace/<strong>my-repo</strong>)
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
