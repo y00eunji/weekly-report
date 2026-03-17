@@ -65,8 +65,15 @@ export const formatGitDataForAI = (data: GitData): string => {
   for (const [repo, commits] of byRepo) {
     lines.push(`\n### ${repo}`);
     for (const c of commits) {
-      const firstLine = c.message.split('\n')[0].trim();
-      if (firstLine) lines.push(`- ${firstLine}`);
+      const [subject, ...bodyLines] = c.message.split('\n');
+      const trimmedSubject = subject.trim();
+      if (!trimmedSubject) continue;
+      const body = bodyLines.join('\n').trim();
+      if (body) {
+        lines.push(`- ${trimmedSubject}\n  ${body.split('\n').join('\n  ')}`);
+      } else {
+        lines.push(`- ${trimmedSubject}`);
+      }
     }
   }
 
