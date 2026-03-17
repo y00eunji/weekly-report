@@ -203,6 +203,19 @@ export default function SettingsPage() {
                   >
                     Bitbucket
                   </button>
+                  <button
+                    onClick={() => {
+                      setSettings((prev) => ({ ...prev, gitSource: 'github' }));
+                      setSaved(false);
+                    }}
+                    className={`flex-1 py-2 rounded-md text-xs font-semibold cursor-pointer border-none transition-all ${
+                      settings.gitSource === 'github'
+                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                        : 'bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    GitHub
+                  </button>
                 </div>
 
                 {/* Local Git Settings */}
@@ -504,6 +517,163 @@ export default function SettingsPage() {
                       </div>
                       <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">
                         Bitbucket URL의 레포지토리 slug (예: bitbucket.org/workspace/<strong>my-repo</strong>)
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* GitHub Settings */}
+                {settings.gitSource === 'github' && (
+                  <div className="space-y-3">
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed">
+                      GitHub Personal Access Token으로 레포의 커밋을 수집합니다.
+                    </p>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        Personal Access Token
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showKey ? 'text' : 'password'}
+                          value={settings.github.token}
+                          onChange={(e) => {
+                            setSettings((prev) => ({
+                              ...prev,
+                              github: { ...prev.github, token: e.target.value },
+                            }));
+                            setSaved(false);
+                          }}
+                          placeholder="ghp_xxxxxxxxxxxx"
+                          className="w-full px-3 py-2.5 pr-10 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors font-mono"
+                        />
+                        <button
+                          onClick={() => setShowKey((prev) => !prev)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-transparent border-none cursor-pointer p-0.5"
+                        >
+                          {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                        GitHub Settings → Developer settings → Personal access tokens → Fine-grained tokens에서 생성 (Contents: Read 권한)
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        커밋 작성자 필터 (선택)
+                      </label>
+                      <input
+                        value={settings.github.authorName}
+                        onChange={(e) => {
+                          setSettings((prev) => ({
+                            ...prev,
+                            github: { ...prev.github, authorName: e.target.value },
+                          }));
+                          setSaved(false);
+                        }}
+                        placeholder="GitHub username 또는 이메일"
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        브랜치
+                      </label>
+                      <input
+                        value={settings.github.branch}
+                        onChange={(e) => {
+                          setSettings((prev) => ({
+                            ...prev,
+                            github: { ...prev.github, branch: e.target.value },
+                          }));
+                          setSaved(false);
+                        }}
+                        placeholder="main"
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors"
+                      />
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                        비워두면 기본 브랜치의 커밋을 수집합니다
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                        레포지토리
+                      </label>
+
+                      {settings.github.repos.length > 0 && (
+                        <div className="space-y-1.5 mb-2">
+                          {settings.github.repos.map((repo, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+                            >
+                              <span className="flex-1 text-[12px] text-gray-700 dark:text-gray-300 font-mono truncate">
+                                {repo}
+                              </span>
+                              <button
+                                onClick={() => {
+                                  setSettings((prev) => ({
+                                    ...prev,
+                                    github: {
+                                      ...prev.github,
+                                      repos: prev.github.repos.filter((_, idx) => idx !== i),
+                                    },
+                                  }));
+                                  setSaved(false);
+                                }}
+                                className="text-gray-400 hover:text-red-500 bg-transparent border-none cursor-pointer p-0.5 shrink-0"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <input
+                          value={newRepoSlug}
+                          onChange={(e) => setNewRepoSlug(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && newRepoSlug.trim()) {
+                              setSettings((prev) => ({
+                                ...prev,
+                                github: {
+                                  ...prev.github,
+                                  repos: [...prev.github.repos, newRepoSlug.trim()],
+                                },
+                              }));
+                              setNewRepoSlug('');
+                              setSaved(false);
+                            }
+                          }}
+                          placeholder="owner/repo"
+                          className="flex-1 px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors font-mono"
+                        />
+                        <button
+                          onClick={() => {
+                            if (newRepoSlug.trim()) {
+                              setSettings((prev) => ({
+                                ...prev,
+                                github: {
+                                  ...prev.github,
+                                  repos: [...prev.github.repos, newRepoSlug.trim()],
+                                },
+                              }));
+                              setNewRepoSlug('');
+                              setSaved(false);
+                            }
+                          }}
+                          className="px-3 py-2.5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors shrink-0"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">
+                        owner/repo 형식 (예: <strong>y00eunji/weekly-report</strong>)
                       </p>
                     </div>
                   </div>

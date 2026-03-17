@@ -222,6 +222,76 @@ export default function apiPlugin() {
         }
       });
 
+      // ─── GitHub API 프록시 ───
+      server.middlewares.use('/api/github/commits', async (req, res) => {
+        if (req.method !== 'POST') return sendJson(res, 405, { error: 'Method not allowed' });
+
+        try {
+          const { token, repos, authorName, branch, dateFrom, dateTo } = await parseBody(req);
+
+          if (!token || !repos?.length) {
+            return sendJson(res, 400, { error: 'token and repos are required' });
+          }
+
+          const allCommits = [];
+
+          for (const repo of repos) {
+            try {
+              let page = 1;
+              let hasMore = true;
+
+              while (hasMore) {
+                const params = new URLSearchParams({
+                  since: `${dateFrom}T00:00:00Z`,
+                  until: `${dateTo}T23:59:59Z`,
+                  per_page: '100',
+                  page: String(page),
+                });
+                if (branch) params.set('sha', branch);
+                if (authorName) params.set('author', authorName);
+
+                const url = `https://api.github.com/repos/${repo}/commits?${params}`;
+                const response = await fetch(url, {
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/vnd.github+json',
+                  },
+                });
+
+                if (!response.ok) {
+                  const errText = await response.text().catch(() => '');
+                  console.warn(`[github] ${repo} 요청 실패: ${response.status}`, errText.slice(0, 200));
+                  break;
+                }
+
+                const data = await response.json();
+                if (!data.length) { hasMore = false; break; }
+
+                for (const commit of data) {
+                  const commitDate = commit.commit?.author?.date?.substring(0, 10) || '';
+                  allCommits.push({
+                    hash: commit.sha?.substring(0, 7) || '',
+                    message: commit.commit?.message?.trim() || '',
+                    date: commitDate,
+                    repo: repo.split('/').pop() || repo,
+                  });
+                }
+
+                page++;
+                if (data.length < 100) hasMore = false;
+              }
+            } catch (err) {
+              console.warn(`[github] ${repo} 처리 실패:`, err.message);
+            }
+          }
+
+          allCommits.sort((a, b) => b.date.localeCompare(a.date));
+          sendJson(res, 200, { commits: allCommits });
+        } catch (err) {
+          sendJson(res, 500, { error: err.message });
+        }
+      });
+
       // ─── Anthropic API 프록시 ───
       server.middlewares.use('/api/anthropic', async (req, res) => {
         if (req.method !== 'POST') return sendJson(res, 405, { error: 'Method not allowed' });

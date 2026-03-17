@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronDown, ChevronUp, Cloud, Download, FileText, GitBranch, Keyboard, RotateCcw, Save, Settings, Sparkles } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Cloud, Download, FileText, GitBranch, Github, Keyboard, RotateCcw, Save, Settings, Sparkles } from 'lucide-react';
 import { usePptxGenLoader } from './hooks/usePptxGenLoader';
 import { useReportGenerator } from './hooks/useReportGenerator';
 import { useReportHistory } from './hooks/useReportHistory';
@@ -14,6 +14,7 @@ import { DateRangePicker } from './components/DateRangePicker';
 import { loadSettings } from './lib/settings';
 import { fetchLocalGitData, formatGitDataForAI } from './lib/git';
 import { fetchBitbucketCommits } from './lib/bitbucket';
+import { fetchGitHubCommits } from './lib/github';
 import type { SavedReport } from './types/report';
 
 // ISO 형식 (YYYY-MM-DD) - input[type=date]용
@@ -59,9 +60,10 @@ export default function App() {
   const hasApiKey = !!settings.apiKey;
   const hasGit = !!(settings.git.repoPaths.length && settings.git.authorName);
   const hasBitbucket = !!(settings.bitbucket?.workspace && settings.bitbucket?.repoSlugs?.length && settings.bitbucket?.username && settings.bitbucket?.apiToken);
+  const hasGitHub = !!(settings.github?.token && settings.github?.repos?.length);
 
-  type InputMode = 'manual' | 'git' | 'bitbucket';
-  const defaultMode = settings.gitSource === 'bitbucket' && hasBitbucket ? 'bitbucket' : hasGit ? 'git' : 'manual';
+  type InputMode = 'manual' | 'git' | 'bitbucket' | 'github';
+  const defaultMode = settings.gitSource === 'github' && hasGitHub ? 'github' : settings.gitSource === 'bitbucket' && hasBitbucket ? 'bitbucket' : hasGit ? 'git' : 'manual';
   const [mode, setMode] = useState<InputMode>(defaultMode);
   const weekRange = getSprintRange();
   const [name, setName] = useState(settings.userName || '');
@@ -75,9 +77,11 @@ export default function App() {
     setFetching(true);
     setError(null);
     try {
-      const data = mode === 'bitbucket'
-        ? await fetchBitbucketCommits(dateFrom, dateTo)
-        : await fetchLocalGitData(dateFrom, dateTo);
+      const data = mode === 'github'
+        ? await fetchGitHubCommits(dateFrom, dateTo)
+        : mode === 'bitbucket'
+          ? await fetchBitbucketCommits(dateFrom, dateTo)
+          : await fetchLocalGitData(dateFrom, dateTo);
       const text = formatGitDataForAI(data);
       setInput(text);
     } catch (e) {
@@ -99,7 +103,7 @@ export default function App() {
       navigate('/settings');
       return;
     }
-    parse(input, name, toDisplayDate(dateTo), mode === 'git' || mode === 'bitbucket');
+    parse(input, name, toDisplayDate(dateTo), mode === 'git' || mode === 'bitbucket' || mode === 'github');
   };
 
   const handleUpdate = useCallback(
@@ -280,6 +284,17 @@ export default function App() {
                     <Cloud size={14} />
                     Bitbucket
                   </button>
+                  <button
+                    onClick={() => setMode('github')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-semibold cursor-pointer border-none transition-all ${
+                      mode === 'github'
+                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                        : 'bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    <Github size={14} />
+                    GitHub
+                  </button>
                 </div>
 
                 {/* Git Mode (Local) */}
@@ -348,6 +363,42 @@ export default function App() {
                         >
                           <Cloud size={14} />
                           {fetching ? '수집 중...' : 'Bitbucket 커밋 수집하기'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* GitHub Mode */}
+                {mode === 'github' && (
+                  <div className="mb-3">
+                    {!hasGitHub ? (
+                      <button
+                        onClick={() => navigate('/settings')}
+                        className="w-full px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 text-blue-700 dark:text-blue-400 text-xs font-medium cursor-pointer text-left hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors"
+                      >
+                        GitHub 설정이 필요합니다. 여기를 클릭하여 설정해주세요.
+                      </button>
+                    ) : (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1 tracking-wider uppercase">
+                            기간
+                          </label>
+                          <DateRangePicker
+                            dateFrom={dateFrom}
+                            dateTo={dateTo}
+                            onChangeFrom={setDateFrom}
+                            onChangeTo={setDateTo}
+                          />
+                        </div>
+                        <button
+                          onClick={handleFetchGit}
+                          disabled={fetching}
+                          className="w-full py-2.5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs font-semibold cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          <Github size={14} />
+                          {fetching ? '수집 중...' : 'GitHub 커밋 수집하기'}
                         </button>
                       </div>
                     )}
