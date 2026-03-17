@@ -17,8 +17,6 @@ export default function SettingsPage() {
   const { dark, toggle } = useDarkMode();
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   const [showKey, setShowKey] = useState(false);
-  const [newRepoPath, setNewRepoPath] = useState('');
-  const [newRepoSlug, setNewRepoSlug] = useState('');
   const [pickingFolder, setPickingFolder] = useState(false);
   const [saved, setSaved] = useState(false);
 

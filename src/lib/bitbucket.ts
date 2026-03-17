@@ -1,5 +1,5 @@
 import { loadSettings } from './settings';
-import type { GitData, GitCommit } from './git';
+import type { GitData } from './git';
 
 const API_BASE = '/api/bitbucket/commits';
 
