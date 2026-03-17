@@ -10,6 +10,7 @@ import { PreviewPanel } from './components/PreviewPanel';
 import { HistoryPanel } from './components/HistoryPanel';
 import { PulseLoader } from './components/PulseLoader';
 import { SAMPLE_INPUT } from './lib/constants';
+import { DateRangePicker } from './components/DateRangePicker';
 import { loadSettings } from './lib/settings';
 import { fetchLocalGitData, formatGitDataForAI } from './lib/git';
 import type { SavedReport } from './types/report';
@@ -278,21 +279,12 @@ export default function App() {
                           <label className="block text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1 tracking-wider uppercase">
                             기간
                           </label>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="date"
-                              value={dateFrom}
-                              onChange={(e) => setDateFrom(e.target.value)}
-                              className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors"
-                            />
-                            <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">~</span>
-                            <input
-                              type="date"
-                              value={dateTo}
-                              onChange={(e) => setDateTo(e.target.value)}
-                              className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 outline-none focus:border-primary transition-colors"
-                            />
-                          </div>
+                          <DateRangePicker
+                            dateFrom={dateFrom}
+                            dateTo={dateTo}
+                            onChangeFrom={setDateFrom}
+                            onChangeTo={setDateTo}
+                          />
                         </div>
                         <button
                           onClick={handleFetchGit}
