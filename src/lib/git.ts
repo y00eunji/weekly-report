@@ -1,6 +1,6 @@
 import { loadSettings } from './settings';
 
-const PROXY_BASE = 'http://localhost:3001/api';
+const GIT_PROXY_BASE = 'http://localhost:3001/api';
 
 export interface GitCommit {
   hash: string;
@@ -27,16 +27,26 @@ export const fetchLocalGitData = async (
     throw new Error('Git Author 이름이 설정되지 않았습니다. 설정 페이지에서 입력해주세요.');
   }
 
-  const res = await fetch(`${PROXY_BASE}/git/commits`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      repoPaths: git.repoPaths,
-      authorName: git.authorName,
-      dateFrom,
-      dateTo,
-    }),
-  });
+  const payload = {
+    repoPaths: git.repoPaths,
+    authorName: git.authorName,
+    dateFrom,
+    dateTo,
+  };
+
+  let res: Response;
+  try {
+    res = await fetch(`${GIT_PROXY_BASE}/git/commits`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new Error(
+      'Git 프록시 서버에 연결할 수 없습니다.\n' +
+      '로컬에서 프록시 서버를 실행해주세요: node server/proxy.js',
+    );
+  }
 
   if (!res.ok) {
     const err = await res.text();

@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -107,22 +107,28 @@ app.post('/api/git/commits', (req, res) => {
   const allCommits = [];
 
   for (const repoPath of repoPaths) {
-    const resolved = repoPath.replace(/^~/, os.homedir());
+    const resolved = path.resolve(repoPath.replace(/^~/, os.homedir()));
 
-    // 경로 존재 확인
     if (!fs.existsSync(resolved)) {
+      console.warn(`[git] 경로 없음: ${resolved}`);
       continue;
     }
 
-    // 레포 이름 = 폴더명
     const repoName = path.basename(resolved);
 
     try {
-      // git log: hash, subject, body, date를 구분자로 파싱
       const SEP = '|||';
       const COMMIT_SEP = '===COMMIT===';
-      const cmd = `git log --all --author="${authorName}" --after="${dateFrom}" --before="${dateTo}T23:59:59" --pretty=format:"${COMMIT_SEP}%h${SEP}%s${SEP}%b${SEP}%ad" --date=short`;
-      const output = execSync(cmd, {
+      const format = `${COMMIT_SEP}%h${SEP}%s${SEP}%b${SEP}%ad`;
+
+      const output = execFileSync('git', [
+        'log', '--all',
+        `--author=${authorName}`,
+        `--after=${dateFrom}`,
+        `--before=${dateTo}T23:59:59`,
+        `--pretty=format:${format}`,
+        '--date=short',
+      ], {
         cwd: resolved,
         encoding: 'utf-8',
         timeout: 10000,
@@ -142,8 +148,8 @@ app.post('/api/git/commits', (req, res) => {
         const message = body ? `${subject}\n${body}` : subject;
         allCommits.push({ hash, message, date, repo: repoName });
       }
-    } catch {
-      // git이 아닌 폴더거나 에러 시 무시
+    } catch (err) {
+      console.warn(`[git] ${repoName} 처리 실패:`, err.message);
     }
   }
 
@@ -152,6 +158,6 @@ app.post('/api/git/commits', (req, res) => {
   res.json({ commits: allCommits });
 });
 
-app.listen(PORT, () => {
-  console.log(`Proxy server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Proxy server running on http://localhost:${PORT} (${process.platform})`);
 });

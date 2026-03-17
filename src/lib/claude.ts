@@ -2,7 +2,7 @@ import type { ParsedReport } from "../types/report";
 import { SYSTEM_PROMPT, SYSTEM_PROMPT_BITBUCKET } from "./constants";
 import { loadSettings } from "./settings";
 
-const PROXY_BASE = "http://localhost:3001/api";
+const PROXY_BASE = "/api";
 
 const callAnthropic = async (
   inputText: string,
