@@ -118,9 +118,10 @@ app.post('/api/git/commits', (req, res) => {
     const repoName = path.basename(resolved);
 
     try {
-      // git log: hash, message, date를 구분자로 파싱
+      // git log: hash, subject, body, date를 구분자로 파싱
       const SEP = '|||';
-      const cmd = `git log --all --author="${authorName}" --after="${dateFrom}" --before="${dateTo}T23:59:59" --pretty=format:"%h${SEP}%s${SEP}%ad" --date=short`;
+      const COMMIT_SEP = '===COMMIT===';
+      const cmd = `git log --all --author="${authorName}" --after="${dateFrom}" --before="${dateTo}T23:59:59" --pretty=format:"${COMMIT_SEP}%h${SEP}%s${SEP}%b${SEP}%ad" --date=short`;
       const output = execSync(cmd, {
         cwd: resolved,
         encoding: 'utf-8',
@@ -129,9 +130,16 @@ app.post('/api/git/commits', (req, res) => {
 
       if (!output) continue;
 
-      for (const line of output.split('\n')) {
-        const [hash, message, date] = line.split(SEP);
-        if (!hash || !message) continue;
+      for (const block of output.split(COMMIT_SEP)) {
+        const trimmed = block.trim();
+        if (!trimmed) continue;
+        const parts = trimmed.split(SEP);
+        const hash = parts[0]?.trim();
+        const subject = parts[1]?.trim();
+        const body = parts[2]?.trim() || '';
+        const date = parts[3]?.trim();
+        if (!hash || !subject) continue;
+        const message = body ? `${subject}\n${body}` : subject;
         allCommits.push({ hash, message, date, repo: repoName });
       }
     } catch {
