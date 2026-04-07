@@ -117,9 +117,9 @@ export default function App() {
           const { itemIdx, field: f, value: v } = value;
           next[sectionKey][groupIdx].items[itemIdx][f] = v;
         } else if (field === 'add_group') {
-          next[sectionKey].push({ group_title: '새 그룹', items: [{ text: '내용을 입력하세요', status: '진행중' }] });
+          next[sectionKey].push({ group_title: '새 그룹', items: [{ text: '', status: '진행중' }] });
         } else if (field === 'add_item') {
-          next[sectionKey][groupIdx].items.push({ text: '내용을 입력하세요', status: '진행중' });
+          next[sectionKey][groupIdx].items.push({ text: '', status: '진행중' });
         } else if (field === 'delete_group') {
           next[sectionKey].splice(groupIdx, 1);
         } else if (field === 'delete_item' && typeof value === 'object') {

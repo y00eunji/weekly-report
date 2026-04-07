@@ -64,7 +64,8 @@ const SortableItem = ({
       <input
         value={item.text}
         onChange={(e) => onItemChange(itemIdx, 'text', e.target.value)}
-        className="flex-1 min-w-0 border-none bg-transparent text-xs text-gray-600 dark:text-gray-300 outline-none"
+        placeholder="내용을 입력하세요"
+        className="flex-1 min-w-0 border-none bg-transparent text-xs text-gray-600 dark:text-gray-300 outline-none placeholder:text-gray-400 dark:placeholder:text-gray-600"
       />
       <button
         onClick={() =>
