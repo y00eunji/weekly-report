@@ -15,20 +15,20 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { ReportGroup, ReportItem } from '../types/report';
+import type { ReportGroup, ReportItem, SectionKey } from '../types/report';
 import { StatusBadge } from './StatusBadge';
 
 interface GroupCardProps {
   group: ReportGroup;
-  sectionKey: 'this_week' | 'next_week';
+  sectionKey: SectionKey;
   groupIdx: number;
   onUpdate: (
-    sectionKey: string,
+    sectionKey: SectionKey,
     groupIdx: number,
     field: string,
-    value: string | { itemIdx: number; field: string; value: string },
+    value: string | { itemIdx: number; field: keyof ReportItem; value: string },
   ) => void;
-  onReorderItems: (sectionKey: string, groupIdx: number, fromIndex: number, toIndex: number) => void;
+  onReorderItems: (sectionKey: SectionKey, groupIdx: number, fromIndex: number, toIndex: number) => void;
 }
 
 // Sortable item row

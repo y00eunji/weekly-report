@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import type { FullReportData, SavedReport } from '../types/report';
+import { deepClone } from '../lib/utils';
 
 const STORAGE_KEY = 'weekly-report-history';
 const MAX_HISTORY = 50;
@@ -18,17 +19,13 @@ const persistHistory = (reports: SavedReport[]) => {
 };
 
 export const useReportHistory = () => {
-  const [history, setHistory] = useState<SavedReport[]>([]);
-
-  useEffect(() => {
-    setHistory(loadHistory());
-  }, []);
+  const [history, setHistory] = useState<SavedReport[]>(loadHistory);
 
   const save = useCallback((data: FullReportData): SavedReport => {
     const now = new Date().toISOString();
     const report: SavedReport = {
       id: crypto.randomUUID(),
-      data: JSON.parse(JSON.stringify(data)),
+      data: deepClone(data),
       createdAt: now,
       updatedAt: now,
     };
@@ -44,7 +41,7 @@ export const useReportHistory = () => {
     setHistory((prev) => {
       const next = prev.map((r) =>
         r.id === id
-          ? { ...r, data: JSON.parse(JSON.stringify(data)), updatedAt: new Date().toISOString() }
+          ? { ...r, data: deepClone(data), updatedAt: new Date().toISOString() }
           : r,
       );
       persistHistory(next);

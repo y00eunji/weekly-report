@@ -12,10 +12,11 @@ import { PulseLoader } from './components/PulseLoader';
 import { SAMPLE_INPUT } from './lib/constants';
 import { DateRangePicker } from './components/DateRangePicker';
 import { loadSettings } from './lib/settings';
+import { deepClone } from './lib/utils';
 import { fetchLocalGitData, formatGitDataForAI } from './lib/git';
 import { fetchBitbucketCommits } from './lib/bitbucket';
 import { fetchGitHubCommits } from './lib/github';
-import type { SavedReport } from './types/report';
+import type { SavedReport, SectionKey, ReportItem } from './types/report';
 
 // ISO 형식 (YYYY-MM-DD) - input[type=date]용
 const toISO = (d: Date) => d.toISOString().substring(0, 10);
@@ -107,15 +108,15 @@ export default function App() {
   };
 
   const handleUpdate = useCallback(
-    (sectionKey: string, groupIdx: number, field: string, value: string | { itemIdx: number; field: string; value: string }) => {
+    (sectionKey: SectionKey, groupIdx: number, field: string, value: string | { itemIdx: number; field: keyof ReportItem; value: string }) => {
       setParsedData((prev) => {
         if (!prev) return prev;
-        const next = JSON.parse(JSON.stringify(prev));
+        const next = deepClone(prev);
         if (field === 'group_title') {
-          next[sectionKey][groupIdx].group_title = value;
+          next[sectionKey][groupIdx].group_title = value as string;
         } else if (field === 'item' && typeof value === 'object') {
           const { itemIdx, field: f, value: v } = value;
-          next[sectionKey][groupIdx].items[itemIdx][f] = v;
+          (next[sectionKey][groupIdx].items[itemIdx] as unknown as Record<string, string>)[f] = v;
         } else if (field === 'add_group') {
           next[sectionKey].push({ group_title: '새 그룹', items: [{ text: '', status: '진행중' }] });
         } else if (field === 'add_item') {
@@ -132,10 +133,10 @@ export default function App() {
   );
 
   const handleReorder = useCallback(
-    (sectionKey: string, fromIndex: number, toIndex: number) => {
+    (sectionKey: SectionKey, fromIndex: number, toIndex: number) => {
       setParsedData((prev) => {
         if (!prev) return prev;
-        const next = JSON.parse(JSON.stringify(prev));
+        const next = deepClone(prev);
         const arr = next[sectionKey];
         const [moved] = arr.splice(fromIndex, 1);
         arr.splice(toIndex, 0, moved);
@@ -146,10 +147,10 @@ export default function App() {
   );
 
   const handleReorderItems = useCallback(
-    (sectionKey: string, groupIdx: number, fromIndex: number, toIndex: number) => {
+    (sectionKey: SectionKey, groupIdx: number, fromIndex: number, toIndex: number) => {
       setParsedData((prev) => {
         if (!prev) return prev;
-        const next = JSON.parse(JSON.stringify(prev));
+        const next = deepClone(prev);
         const items = next[sectionKey][groupIdx].items;
         const [moved] = items.splice(fromIndex, 1);
         items.splice(toIndex, 0, moved);
@@ -170,7 +171,7 @@ export default function App() {
   };
 
   const handleLoadReport = (report: SavedReport) => {
-    loadData(JSON.parse(JSON.stringify(report.data)));
+    loadData(deepClone(report.data));
     setName(report.data.name);
     setActiveReportId(report.id);
     setHistoryOpen(false);

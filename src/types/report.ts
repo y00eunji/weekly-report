@@ -8,6 +8,8 @@ export interface ReportGroup {
   items: ReportItem[];
 }
 
+export type SectionKey = 'this_week' | 'next_week';
+
 export interface ParsedReport {
   this_week: ReportGroup[];
   next_week: ReportGroup[];

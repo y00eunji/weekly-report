@@ -1,4 +1,5 @@
 import { loadSettings } from './settings';
+import { postToProxy } from './utils';
 import type { GitData } from './git';
 
 const API_BASE = '/api/bitbucket/commits';
@@ -31,21 +32,10 @@ export const fetchBitbucketCommits = async (
     dateTo,
   };
 
-  let res: Response;
-  try {
-    res = await fetch(API_BASE, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-  } catch {
-    throw new Error('Bitbucket API 프록시에 연결할 수 없습니다.');
-  }
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Bitbucket 커밋 수집 실패: ${res.status} - ${err}`);
-  }
-
-  return res.json();
+  return postToProxy<GitData>(
+    API_BASE,
+    payload,
+    'Bitbucket API 프록시에 연결할 수 없습니다.',
+    'Bitbucket',
+  );
 };

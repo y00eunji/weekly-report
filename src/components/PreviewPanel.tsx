@@ -13,19 +13,19 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import type { FullReportData } from '../types/report';
+import type { FullReportData, SectionKey, ReportItem } from '../types/report';
 import { SortableGroupCard } from './GroupCard';
 
 interface PreviewPanelProps {
   data: FullReportData;
   onUpdate: (
-    sectionKey: string,
+    sectionKey: SectionKey,
     groupIdx: number,
     field: string,
-    value: string | { itemIdx: number; field: string; value: string },
+    value: string | { itemIdx: number; field: keyof ReportItem; value: string },
   ) => void;
-  onReorder: (sectionKey: string, fromIndex: number, toIndex: number) => void;
-  onReorderItems: (sectionKey: string, groupIdx: number, fromIndex: number, toIndex: number) => void;
+  onReorder: (sectionKey: SectionKey, fromIndex: number, toIndex: number) => void;
+  onReorderItems: (sectionKey: SectionKey, groupIdx: number, fromIndex: number, toIndex: number) => void;
 }
 
 export const PreviewPanel = ({ data, onUpdate, onReorder, onReorderItems }: PreviewPanelProps) => {
@@ -39,7 +39,7 @@ export const PreviewPanel = ({ data, onUpdate, onReorder, onReorderItems }: Prev
     { key: 'next_week' as const, label: '차주 계획', groups: data.next_week || [] },
   ];
 
-  const handleGroupDragEnd = (sectionKey: string) => (event: DragEndEvent) => {
+  const handleGroupDragEnd = (sectionKey: SectionKey) => (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const fromIndex = Number(String(active.id).split('-').pop());

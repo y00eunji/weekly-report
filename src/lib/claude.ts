@@ -4,51 +4,33 @@ import { loadSettings } from "./settings";
 
 const PROXY_BASE = "/api";
 
-const callAnthropic = async (
-  inputText: string,
-  apiKey: string,
-  model: string,
-  systemPrompt: string,
-) => {
-  const response = await fetch(`${PROXY_BASE}/anthropic`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-    },
-    body: JSON.stringify({
+type ProviderConfig = {
+  url: string;
+  buildBody: (inputText: string, model: string, systemPrompt: string) => object;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  extractText: (result: any) => string;
+  errorLabel: string;
+};
+
+const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
+  anthropic: {
+    url: `${PROXY_BASE}/anthropic`,
+    buildBody: (inputText, model, systemPrompt) => ({
       model,
       max_tokens: 1000,
       system: systemPrompt,
       messages: [{ role: "user", content: inputText }],
     }),
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Anthropic API 오류: ${response.status} - ${err}`);
-  }
-
-  const result = await response.json();
-  return result.content
-    .filter((b: { type: string }) => b.type === "text")
-    .map((b: { text: string }) => b.text)
-    .join("");
-};
-
-const callOpenAI = async (
-  inputText: string,
-  apiKey: string,
-  model: string,
-  systemPrompt: string,
-) => {
-  const response = await fetch(`${PROXY_BASE}/openai`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-    },
-    body: JSON.stringify({
+    extractText: (result) =>
+      result.content
+        .filter((b: { type: string }) => b.type === "text")
+        .map((b: { text: string }) => b.text)
+        .join(""),
+    errorLabel: "Anthropic",
+  },
+  openai: {
+    url: `${PROXY_BASE}/openai`,
+    buildBody: (inputText, model, systemPrompt) => ({
       model,
       max_tokens: 1000,
       messages: [
@@ -56,43 +38,46 @@ const callOpenAI = async (
         { role: "user", content: inputText },
       ],
     }),
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`OpenAI API 오류: ${response.status} - ${err}`);
-  }
-
-  const result = await response.json();
-  return result.choices[0].message.content;
+    extractText: (result) => result.choices[0].message.content,
+    errorLabel: "OpenAI",
+  },
+  gemini: {
+    url: `${PROXY_BASE}/gemini`,
+    buildBody: (inputText, model, systemPrompt) => ({
+      model,
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: "user", parts: [{ text: inputText }] }],
+    }),
+    extractText: (result) => result.candidates[0].content.parts[0].text,
+    errorLabel: "Gemini",
+  },
 };
 
-const callGemini = async (
+const callLLMProvider = async (
   inputText: string,
   apiKey: string,
   model: string,
   systemPrompt: string,
-) => {
-  const response = await fetch(`${PROXY_BASE}/gemini`, {
+  provider: string,
+): Promise<string> => {
+  const config = PROVIDER_CONFIGS[provider] ?? PROVIDER_CONFIGS.anthropic;
+
+  const response = await fetch(config.url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "x-api-key": apiKey,
     },
-    body: JSON.stringify({
-      model,
-      system_instruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ role: "user", parts: [{ text: inputText }] }],
-    }),
+    body: JSON.stringify(config.buildBody(inputText, model, systemPrompt)),
   });
 
   if (!response.ok) {
     const err = await response.text();
-    throw new Error(`Gemini API 오류: ${response.status} - ${err}`);
+    throw new Error(`${config.errorLabel} API 오류: ${response.status} - ${err}`);
   }
 
   const result = await response.json();
-  return result.candidates[0].content.parts[0].text;
+  return config.extractText(result);
 };
 
 export const parseWithAI = async (
@@ -110,16 +95,7 @@ export const parseWithAI = async (
     );
   }
 
-  let text: string;
-
-  if (provider === "openai") {
-    text = await callOpenAI(inputText, apiKey, model, systemPrompt);
-  } else if (provider === "gemini") {
-    text = await callGemini(inputText, apiKey, model, systemPrompt);
-  } else {
-    text = await callAnthropic(inputText, apiKey, model, systemPrompt);
-  }
-
+  const text = await callLLMProvider(inputText, apiKey, model, systemPrompt, provider);
   const cleaned = text.replace(/```json|```/g, "").trim();
   return JSON.parse(cleaned);
 };

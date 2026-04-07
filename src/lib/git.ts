@@ -1,4 +1,5 @@
 import { loadSettings } from './settings';
+import { postToProxy } from './utils';
 
 const GIT_PROXY_BASE = '/api';
 
@@ -34,26 +35,12 @@ export const fetchLocalGitData = async (
     dateTo,
   };
 
-  let res: Response;
-  try {
-    res = await fetch(`${GIT_PROXY_BASE}/git/commits`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-  } catch {
-    throw new Error(
-      'Git 프록시 서버에 연결할 수 없습니다.\n' +
-      '로컬에서 프록시 서버를 실행해주세요: node server/proxy.js',
-    );
-  }
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Git 커밋 수집 실패: ${res.status} - ${err}`);
-  }
-
-  return res.json();
+  return postToProxy<GitData>(
+    `${GIT_PROXY_BASE}/git/commits`,
+    payload,
+    'Git 프록시 서버에 연결할 수 없습니다.\n로컬에서 프록시 서버를 실행해주세요: node server/proxy.js',
+    'Git',
+  );
 };
 
 // 수집된 커밋 데이터를 AI 입력용 텍스트로 변환
