@@ -42,7 +42,7 @@ const SortableItem = ({
   id: string;
   item: ReportItem;
   itemIdx: number;
-  onItemChange: (itemIdx: number, field: string, value: string) => void;
+  onItemChange: (itemIdx: number, field: keyof ReportItem, value: string) => void;
   onDeleteItem: (itemIdx: number) => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -129,12 +129,12 @@ const GroupCard = ({
     onUpdate(sectionKey, groupIdx, 'group_title', e.target.value);
   };
 
-  const handleItemChange = (itemIdx: number, field: string, value: string) => {
+  const handleItemChange = (itemIdx: number, field: keyof ReportItem, value: string) => {
     onUpdate(sectionKey, groupIdx, 'item', { itemIdx, field, value });
   };
 
   const handleDeleteItem = (itemIdx: number) => {
-    onUpdate(sectionKey, groupIdx, 'delete_item', { itemIdx, field: '', value: '' });
+    onUpdate(sectionKey, groupIdx, 'delete_item', { itemIdx, field: 'text', value: '' });
   };
 
   const handleItemDragEnd = (event: DragEndEvent) => {
