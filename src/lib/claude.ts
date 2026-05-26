@@ -53,31 +53,47 @@ const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
   },
 };
 
+const RETRYABLE_STATUS = new Set([429, 503, 502, 504]);
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const callLLMProvider = async (
   inputText: string,
   apiKey: string,
   model: string,
   systemPrompt: string,
   provider: string,
+  maxRetries = 3,
 ): Promise<string> => {
   const config = PROVIDER_CONFIGS[provider] ?? PROVIDER_CONFIGS.anthropic;
 
-  const response = await fetch(config.url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-    },
-    body: JSON.stringify(config.buildBody(inputText, model, systemPrompt)),
-  });
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(config.url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+      },
+      body: JSON.stringify(config.buildBody(inputText, model, systemPrompt)),
+    });
 
-  if (!response.ok) {
+    if (response.ok) {
+      const result = await response.json();
+      return config.extractText(result);
+    }
+
     const err = await response.text();
+
+    if (RETRYABLE_STATUS.has(response.status) && attempt < maxRetries) {
+      const delay = Math.min(1000 * 2 ** attempt, 16000);
+      await sleep(delay);
+      continue;
+    }
+
     throw new Error(`${config.errorLabel} API 오류: ${response.status} - ${err}`);
   }
 
-  const result = await response.json();
-  return config.extractText(result);
+  throw new Error(`${config.errorLabel} API 요청이 반복적으로 실패했습니다. 잠시 후 다시 시도해주세요.`);
 };
 
 export const parseWithAI = async (

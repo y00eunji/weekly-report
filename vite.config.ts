@@ -5,6 +5,12 @@ import path from 'path'
 import apiPlugin from './vite-api-plugin.js'
 
 export default defineConfig({
+  server: {
+    port: 3000,
+  },
+  preview: {
+    port: 3000,
+  },
   plugins: [react(), tailwindcss(), apiPlugin()],
   resolve: {
     alias: {
